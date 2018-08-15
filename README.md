@@ -1,3 +1,19 @@
+Optimized implementation of twofish block cipher algorithm in C written by @drewcsillag
+
+with stream encryption / decryption API similar to OpenSSL EVP.
+
+Encryption supported:
+- [x] twofish-256-ecb
+- [ ] twofish-256-cbc
+
+bindings:
+- [ ] ruby
+
+-----------
+
+original README:
+
+
 Twofish
 -----------
 Originally written around 2000-2001 or so.
