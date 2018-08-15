@@ -76,6 +76,8 @@ void bench()
 int main()
 {
     BYTE text[16];
+    BYTE crypt[16];
+    BYTE iv[16] = "AAAABBBBCCCCDDDD";
     BYTE key[32];
 
     /* 
@@ -87,16 +89,22 @@ int main()
     memcpy(text, "\xD4\x91\xDB\x16\xE7\xB1\xC3\x9E"
 	         "\x86\xCB\x08\x6B\x78\x9F\x54\x19", 16);
 
-    struct twofish *twofish_ctx = twofish_256_ecb_init(key, (void *) 0);
+    struct twofish *twofish_ecb_ctx = twofish_256_ecb_init(key, (void *) 0);
+    struct twofish *twofish_cbc_ctx = twofish_256_cbc_init(key, iv);
 
-    printf("before-->"); printHex(text, 16); printf("\n");
-    twofish_encrypt_final(twofish_ctx, text, 16, text, 16);
-    printf("after--->"); printHex(text, 16); printf("\n");
-    twofish_decrypt_final(twofish_ctx, text, 16, text, 16);
-    printf("after--->"); printHex(text, 16); printf("\n");
+    printf("before-->     "); printHex(text, 16); printf("\n");
+    twofish_encrypt_final(twofish_ecb_ctx, text, 16, crypt, 16);
+    printf("after ecb --->"); printHex(crypt, 16); printf("\n");
+    twofish_decrypt_final(twofish_ecb_ctx, crypt, 16, text, 16);
+    printf("decrypted --->"); printHex(text, 16); printf("\n");
+    twofish_encrypt_final(twofish_cbc_ctx, text, 16, crypt, 16);
+    printf("after cbc --->"); printHex(crypt, 16); printf("\n");
+    twofish_decrypt_final(twofish_cbc_ctx, crypt, 16, text, 16);
+    printf("decrypted --->"); printHex(text, 16); printf("\n");
 
     /*Itest(128);*/
-    twofish_free(&twofish_ctx);
+    twofish_free(&twofish_ecb_ctx);
+    twofish_free(&twofish_cbc_ctx);
 
     bench();
     return 0;
