@@ -348,6 +348,13 @@ struct twofish {
     enum twofish_mode mode;
 };
 
+void fix_xor(BYTE target[16], BYTE source[16])
+{
+    for (int i = 0; i < 16; i++) {
+        target[i] = target[i] ^ source[i];
+    }
+}
+
 /**
  * public API
  **/
@@ -357,7 +364,7 @@ struct twofish {
  * we wont do any checking here and will assume user already
  * know about it. Twofish is undefined for key larger than 256 bit
  */
-struct twofish *twofish_256_init(BYTE key[])
+struct twofish *twofish_256_init(BYTE key[32])
 {
     int k;
     u32 *S;
@@ -374,12 +381,22 @@ struct twofish *twofish_256_init(BYTE key[])
     return twofish_ctx;
 }
 
-struct twofish *twofish_256_ecb_init(BYTE key[], BYTE iv[16] /* unused */)
+struct twofish *twofish_256_ecb_init(BYTE key[32], BYTE iv[16] /* unused */)
 {
     struct twofish *twofish_ctx;
 
     twofish_ctx = twofish_256_init(key);
     twofish_ctx->mode = twofish_mode_ecb;
+    return twofish_ctx;
+}
+
+struct twofish *twofish_256_cbc_init(BYTE key[32], BYTE iv[16])
+{
+    struct twofish *twofish_ctx;
+
+    twofish_ctx = twofish_256_init(key);
+    twofish_ctx->mode = twofish_mode_cbc;
+    memcpy(twofish_ctx->pv, iv, 16);
     return twofish_ctx;
 }
 
@@ -405,6 +422,27 @@ else {                                                                       \
     newbuff = current;                                                       \
 }
 
+#define ENCRYPT_ECB(ctx, nblock, text, target) for (int i = 0; i < nblock; i++) { \
+    memcpy(ctx->pv, &text[i * 16], 16);                                   \
+    encrypt(ctx->K, ctx->QF, ctx->pv);                                    \
+    memcpy(&target[i * 16], ctx->pv, 16);                                 \
+}
+
+#define ENCRYPT_CBC(ctx, nblock, text, target) for (int i = 0; i < nblock; i++) { \
+    fix_xor(ctx->pv, &text[i * 16]);                                      \
+    encrypt(ctx->K, ctx->QF, ctx->pv);                                    \
+    memcpy(&target[i * 16], ctx->pv, 16);                                 \
+}
+
+#define ENCRYPT_WITH(ctx, nblock, text, crypt) switch (ctx->mode) { \
+case twofish_mode_ecb:                                              \
+    ENCRYPT_ECB(ctx, nblock, text, crypt);                          \
+    break;                                                          \
+case twofish_mode_cbc:                                              \
+    ENCRYPT_CBC(ctx, nblock, text, crypt);                          \
+    break;                                                          \
+}
+
 int twofish_encrypt_update(
         struct twofish *ctx,
         BYTE plain_text[],
@@ -421,11 +459,7 @@ int twofish_encrypt_update(
     nblock = text_len / 16;
     lrest = text_len % 16;
 
-    for (int i = 0; i < nblock; i++) {
-        memcpy(ctx->pv, &text[i * 16], 16);
-        encrypt(ctx->K, ctx->QF, ctx->pv);
-        memcpy(&crypted_text[i * 16], ctx->pv, 16);
-    }
+    ENCRYPT_WITH(ctx, nblock, text, crypted_text);
 
     if (lrest) {
         ctx->nrest = lrest;
@@ -466,17 +500,35 @@ int twofish_encrypt_final(
         nblock = nblock + 1;
     }
 
-    for (int i = 0; i < nblock; i++) {
-        memcpy(ctx->pv, &text[i * 16], 16);
-        encrypt(ctx->K, ctx->QF, ctx->pv);
-        memcpy(&crypted_text[i * 16], ctx->pv, 16);
-    }
+    ENCRYPT_WITH(ctx, nblock, text, crypted_text);
 
     if (text && text != plain_text) {
         free(text);
     }
 
     return nblock * 16;
+}
+
+#define DECRYPT_ECB(ctx, nblock, crypted, plain) for (int i = 0; i < nblock; i++) { \
+    memcpy(ctx->pv, &crypted[i * 16], 16);                                          \
+    decrypt(ctx->K, ctx->QF, ctx->pv);                                              \
+    memcpy(&plain[i * 16], ctx->pv, 16);                                            \
+}
+
+#define DECRYPT_CBC(ctx, nbloc, crypted, plain) for (int i = 0; i < nblock; i++) { \
+    memcpy(&plain[i * 16], &crypted[i * 16], 16);                              \
+    decrypt(ctx->K, ctx->QF, &plain[i * 16]);                                  \
+    fix_xor(&plain[i * 16], ctx->pv);                                          \
+    memcpy(&ctx->pv, &crypted[i * 16], 16);                                    \
+}
+
+#define DECRYPT_WITH(ctx, nbloc, crypted, plain) switch (ctx->mode) { \
+case twofish_mode_ecb:                                                \
+    DECRYPT_ECB(ctx, nblock, crypted, plain);                         \
+    break;                                                            \
+case twofish_mode_cbc:                                                \
+    DECRYPT_CBC(ctx, nblock, crypted, plain);                         \
+    break;                                                            \
 }
 
 int twofish_decrypt_update(
@@ -495,11 +547,7 @@ int twofish_decrypt_update(
     nblock = crypted_len / 16;
     lrest = crypted_len % 16;
 
-    for (int i = 0; i < nblock; i++) {
-        memcpy(ctx->pv, &text[i * 16], 16);
-        decrypt(ctx->K, ctx->QF, ctx->pv);
-        memcpy(&plain_text[i * 16], ctx->pv, 16);
-    }
+    DECRYPT_WITH(ctx, nblock, text, plain_text);
 
     if (lrest) {
         ctx->nrest = lrest;
@@ -537,11 +585,7 @@ int twofish_decrypt_final(
         return -3;
     }
 
-    for (int i = 0; i < nblock; i++) {
-        memcpy(ctx->pv, &text[i *16], 16);
-        decrypt(ctx->K, ctx->QF, ctx->pv);
-        memcpy(plain_text, ctx->pv, 16);
-    }
+    DECRYPT_WITH(ctx, nblock, text, plain_text);
 
     if (text && text != crypted_text) {
         free(text);
