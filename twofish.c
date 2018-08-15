@@ -327,7 +327,12 @@ void keySched(BYTE M[], int N, u32 **S, u32 K[40], int *k)
 	K[2*i] = A+B;
 	K[2*i+1] = ROL(A + 2*B, 9);
     }
-}	
+}
+
+enum twofish_mode {
+    twofish_mode_ecb,
+    twofish_mode_cbc
+};
 
 struct twofish {
     int N;
@@ -336,7 +341,7 @@ struct twofish {
     BYTE pv[16];
     u32 nrest;
     BYTE rest[16];
-    int mode;
+    enum twofish_mode mode;
 };
 
 /**
@@ -365,12 +370,13 @@ struct twofish *twofish_256_init(BYTE key[])
     return twofish_ctx;
 }
 
-struct twofish *twofish_256_ecb_init(BYTE key[])
+struct twofish *twofish_256_ecb_init(BYTE key[], BYTE iv[16])
 {
     st_twofish *twofish_ctx;
 
     twofish_ctx = twofish_256_init(key);
     twofish_ctx->mode = twofish_ecb;
+    memcpy(twofish_ctx->pv, iv, 16);
     return twofish_ctx;
 }
 
@@ -467,5 +473,76 @@ int twofish_encrypt_final(
         free(text);
     }
 
-    return nblock * 16 + lrest;
+    return nblock * 16;
+}
+
+int twofish_decrypt_update(
+        struct twofish *ctx,
+        BYTE crypted_text[],
+        u32 crypted_len,
+        BYTE plain_text[],
+        u32 text_size)
+{
+    u32 nblock;
+    int lrest;
+    BYTE *text = 0;
+
+    CONCAT_PREV_BUFFER(text, ctx->rest, ctx->nrest, crypted_text, crypted_len);
+
+    nblock = crypted_len / 16;
+    lrest = crypted_len % 16;
+
+    for (int i = 0; i < nblock; i++) {
+        memcpy(ctx->pv, &text[i * 16], 16);
+        decrypt(ctx->K, ctx->QF, ctx->pv);
+        memcpy(&plain_text[i * 16], ctx->pv, 16);
+    }
+
+    if (lrest) {
+        ctx->nrest = lrest;
+        memset(ctx->rest, 0, 16);
+        memcpy(ctx->rest, &text[nblock * 16], lrest);
+    }
+
+    if (text && text != crypted_text) {
+        free(text);
+    }
+
+    return nblock * 16;
+}
+
+int twofish_decrypt_final(
+        struct twofish *ctx,
+        BYTE crypted_text[],
+        u32 crypted_len,
+        BYTE plain_text[],
+        u32 text_size)
+{
+    u32 nblock;
+    int lrest;
+    BYTE *text = 0;
+
+    CONCAT_PREV_BUFFER(text, ctx->rest, ctx->nrest, crypted_text, crypted_len);
+
+    nblock = crypted_len / 16;
+    lrest = crypted_len % 16;
+
+    if (lrest) {
+        if (text && text != crypted_text) {
+            free(text);
+        }
+        return -3;
+    }
+
+    for (int i = 0; i < nblock; i++) {
+        memcpy(ctx->pv, &text[i *16], 16);
+        decrypt(ctx->K, ctx->QV, ctx->pv);
+        memcpy(plain_text, ctx->pv, 16);
+    }
+
+    if (text && text != crypted_text) {
+        free(text);
+    }
+
+    return nblock * 16;
 }
