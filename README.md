@@ -4,7 +4,7 @@ with stream encryption / decryption API similar to OpenSSL EVP.
 
 Encryption supported:
 - [x] twofish-256-ecb
-- [ ] twofish-256-cbc
+- [x] twofish-256-cbc
 
 bindings:
 - [ ] ruby
