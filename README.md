@@ -3,7 +3,7 @@ Optimized implementation of twofish block cipher algorithm in C written by @drew
 with stream encryption / decryption API similar to OpenSSL EVP.
 
 Encryption supported:
-- [V] twofish-256-ecb
+- [x] twofish-256-ecb
 - [ ] twofish-256-cbc
 
 bindings:
