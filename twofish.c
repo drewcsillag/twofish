@@ -26,10 +26,14 @@
 */
 
 #include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 
 #include "twofish.h"
 #include "tables.h"
+
+#define RS_MOD 0x14D
+#define RHO 0x01010101L
 
 /* 
    gcc is smart enough to convert these to roll instructions.  If you want
@@ -219,7 +223,7 @@ void fullKey(u32 L[4], int k, u32 QF[4][256])
     R2 = ROR(R2 ^ (T1 + T0 + K[2*round+8]), 1); \
     R3 = ROL(R3, 1) ^ (2*T1 + T0 + K[2*round+9]); 
 
-inline void encrypt(u32 K[40], u32 S[4][256], BYTE PT[16])
+void encrypt(u32 K[40], u32 S[4][256], BYTE PT[16])
 {
     u32 R0, R1, R2, R3;
     u32 T0, T1;
@@ -261,7 +265,7 @@ inline void encrypt(u32 K[40], u32 S[4][256], BYTE PT[16])
     R2 = ROL(R2, 1) ^ (T0 + T1 + K[2*round+8]); \
     R3 = ROR(R3 ^ (T0 + 2*T1 + K[2*round+9]), 1); 
 
-inline void decrypt(u32 K[40], u32 S[4][256], BYTE PT[16])
+void decrypt(u32 K[40], u32 S[4][256], BYTE PT[16])
 {
     u32 T0, T1;
     u32 R0, R1, R2, R3;
@@ -357,26 +361,25 @@ struct twofish *twofish_256_init(BYTE key[])
 {
     int k;
     u32 *S;
-    st_twofish *twofish_ctx;
+    struct twofish *twofish_ctx;
 
     twofish_ctx = calloc(1, sizeof(struct twofish));
     assert(twofish_ctx);
 
     twofish_ctx->N = 256;
     keySched(key, 256, &S, twofish_ctx->K, &k);
-    fullKey(S, k, twofish->QF);
+    fullKey(S, k, twofish_ctx->QF);
     free(S);
 
     return twofish_ctx;
 }
 
-struct twofish *twofish_256_ecb_init(BYTE key[], BYTE iv[16])
+struct twofish *twofish_256_ecb_init(BYTE key[], BYTE iv[16] /* unused */)
 {
-    st_twofish *twofish_ctx;
+    struct twofish *twofish_ctx;
 
     twofish_ctx = twofish_256_init(key);
-    twofish_ctx->mode = twofish_ecb;
-    memcpy(twofish_ctx->pv, iv, 16);
+    twofish_ctx->mode = twofish_mode_ecb;
     return twofish_ctx;
 }
 
@@ -389,7 +392,7 @@ void twofish_free(struct twofish **pctx)
 }
 
 #define CONCAT_PREV_BUFFER(newbuff, prev, nprev, current, ncurrent) if (nprev) { \
-    u32 snaplen = ((ncurrent + nprev) % 16) == 0 ?                           \
+    unsigned int snaplen = ((ncurrent + nprev) % 16) == 0 ?                  \
         0 :                                                                  \
         (16 - ((ncurrent + nprev) % 16));                                    \
     newbuff = calloc(ncurrent + nprev + snaplen + 1, sizeof(BYTE));          \
@@ -536,7 +539,7 @@ int twofish_decrypt_final(
 
     for (int i = 0; i < nblock; i++) {
         memcpy(ctx->pv, &text[i *16], 16);
-        decrypt(ctx->K, ctx->QV, ctx->pv);
+        decrypt(ctx->K, ctx->QF, ctx->pv);
         memcpy(plain_text, ctx->pv, 16);
     }
 

@@ -29,45 +29,6 @@ void printSubkeys(u32 K[40])
 	printf("%08X %08X\n", K[i], K[i+1]);
 }
 
-/* the ECB tests */
-void Itest(int n)
-{
-    BYTE ct[16], nct[16], k1[16], k2[16], k[32];
-
-    u32 QF[4][256];
-    int i;
-    u32 *KS;
-    u32 K[40];
-    int Kk;
-    
-    memset(ct, 0, 16);
-    memset(nct, 0, 16);
-    memset(k1, 0, 16);
-    memset(k2, 0, 16);
-
-    for (i=0; i<49; i++)
-    {
-	memcpy(k, k1, 16);
-	memcpy(k+16, k2, 16);
-
-	keySched(k, n, &KS, K, &Kk);
-	fullKey(KS, Kk, QF);
-	free(KS);
-	printSubkeys(K);
-	memcpy(nct, ct, 16);
-    encrypt(K, QF, nct);
-	printf("\nI=%d\n", i+1);
-	printf("KEY="); 
-	printHex(k, n/8);
-	printf("\n");
-	printf("PT="); printHex(ct, 16); printf("\n");
-	printf("CT="); printHex(nct, 16); printf("\n");
-	memcpy(k2, k1, 16);
-	memcpy(k1, ct, 16);
-	memcpy(ct, nct, 16);
-    }
-}
-
 #include <sys/time.h>
 #include <unistd.h>
 #include <time.h>
@@ -90,26 +51,19 @@ double getTimeDiff(struct timeval t1, struct timeval t2)
 #define NUMTIMES 1000000
 void bench()
 {
-    u32 *S;
-    u32 K[40];
-    int k;
     int i;
     struct timeval tv_start, tv_end;
     double diff;
-    u32 QF[4][256];
     BYTE text[16];
     BYTE key[32];
 
-    memset(text, 0, 16);
-    memset(key, 0, 32);
-    keySched(key, 128, &S, K, &k);
-    fullKey(S, k, QF);
-    free(S);
-
+    struct twofish *twofish_ctx = twofish_256_ecb_init(key, (void *) 0);
     gettimeofday(&tv_start, NULL);
     for (i=0; i < NUMTIMES; i++)
-	encrypt(K, QF, text);
+	    twofish_encrypt_final(twofish_ctx, text, 16, text, 16);
     gettimeofday(&tv_end, NULL);
+
+    twofish_free(&twofish_ctx);
 
     diff = getTimeDiff(tv_start, tv_end);
     printf("encs/sec = %f\n", NUMTIMES/diff);
@@ -121,24 +75,8 @@ void bench()
 
 int main()
 {
-    u32 *S;
-    u32 K[40];
-    int k;
-    u32 QF[4][256];
     BYTE text[16];
     BYTE key[32];
-
-    /* a few tests to make sure we didn't break anything */
-
-    /*test encryption of null string with null key*/
-    memset(text, 0, 16);
-    memset(key, 0, 32);
-    keySched(key, 128, &S, K, &k);
-    fullKey(S, k, QF);
-    free(S);
-    puts("before"); printHex(text, 16); printf("\n");
-    encrypt(K, QF, text);
-    puts("after"); printHex(text, 16); printf("\n");
 
     /* 
        I=3 encryption from ECB test, again to make sure we didn't
@@ -148,16 +86,17 @@ int main()
 	         "\xB6\xBF\xEC\x2F\x2A\xE8\xC3\x5A", 16);
     memcpy(text, "\xD4\x91\xDB\x16\xE7\xB1\xC3\x9E"
 	         "\x86\xCB\x08\x6B\x78\x9F\x54\x19", 16);
-    keySched(key, 128, &S, K, &k);
-    fullKey(S, k, QF);
-    free(S);
+
+    struct twofish *twofish_ctx = twofish_256_ecb_init(key, (void *) 0);
+
     printf("before-->"); printHex(text, 16); printf("\n");
-    encrypt(K, QF, text);
+    twofish_encrypt_final(twofish_ctx, text, 16, text, 16);
     printf("after--->"); printHex(text, 16); printf("\n");
-    decrypt(K, QF, text);
+    twofish_decrypt_final(twofish_ctx, text, 16, text, 16);
     printf("after--->"); printHex(text, 16); printf("\n");
 
     /*Itest(128);*/
+    twofish_free(&twofish_ctx);
 
     bench();
     return 0;
