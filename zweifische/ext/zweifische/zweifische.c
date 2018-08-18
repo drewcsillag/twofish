@@ -115,6 +115,9 @@ void Init_zweifische()
     rb_define_method(cCipher256ecb, "decrypt_update", cipher_decrypt_update, 1);
     rb_define_method(cCipher256ecb, "decrypt_final", cipher_decrypt_final, 1);
 
+    rb_define_alias(cCipher256ecb, "encrypt", "encrypt_final");
+    rb_define_alias(cCipher256ecb, "decrypt", "decrypt_final");
+
     cCipher256cbc = rb_define_class_under(mZweifische, "Cipher256cbc", cCipher256ecb);
     rb_define_method(cCipher256cbc, "initialize", cipher_256_cbc_init, 2);
 
