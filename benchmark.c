@@ -84,6 +84,7 @@ int main()
        I=3 encryption from ECB test, again to make sure we didn't
        break anything
     */
+    memset(key, 0, 32);
     memcpy(key,  "\x9F\x58\x9F\x5C\xF6\x12\x2C\x32"
 	         "\xB6\xBF\xEC\x2F\x2A\xE8\xC3\x5A", 16);
     memcpy(text, "\xD4\x91\xDB\x16\xE7\xB1\xC3\x9E"
