@@ -7,7 +7,7 @@ Encryption supported:
 - [x] twofish-256-cbc
 
 bindings:
-- [ ] ruby
+- [x] ruby
 
 -----------
 

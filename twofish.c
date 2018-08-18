@@ -223,7 +223,7 @@ void fullKey(u32 L[4], int k, u32 QF[4][256])
     R2 = ROR(R2 ^ (T1 + T0 + K[2*round+8]), 1); \
     R3 = ROL(R3, 1) ^ (2*T1 + T0 + K[2*round+9]); 
 
-void encrypt(u32 K[40], u32 S[4][256], BYTE PT[16])
+void twofish_internal_encrypt(u32 K[40], u32 S[4][256], BYTE PT[16])
 {
     u32 R0, R1, R2, R3;
     u32 T0, T1;
@@ -265,7 +265,7 @@ void encrypt(u32 K[40], u32 S[4][256], BYTE PT[16])
     R2 = ROL(R2, 1) ^ (T0 + T1 + K[2*round+8]); \
     R3 = ROR(R3 ^ (T0 + 2*T1 + K[2*round+9]), 1); 
 
-void decrypt(u32 K[40], u32 S[4][256], BYTE PT[16])
+void twofish_internal_decrypt(u32 K[40], u32 S[4][256], BYTE PT[16])
 {
     u32 T0, T1;
     u32 R0, R1, R2, R3;
@@ -425,13 +425,13 @@ else {                                                                       \
 
 #define ENCRYPT_ECB(ctx, nblock, text, target) for (int i = 0; i < nblock; i++) { \
     memcpy(ctx->pv, &text[i * 16], 16);                                   \
-    encrypt(ctx->K, ctx->QF, ctx->pv);                                    \
+    twofish_internal_encrypt(ctx->K, ctx->QF, ctx->pv);                                    \
     memcpy(&target[i * 16], ctx->pv, 16);                                 \
 }
 
 #define ENCRYPT_CBC(ctx, nblock, text, target) for (int i = 0; i < nblock; i++) { \
     fix_xor(ctx->pv, &text[i * 16]);                                      \
-    encrypt(ctx->K, ctx->QF, ctx->pv);                                    \
+    twofish_internal_encrypt(ctx->K, ctx->QF, ctx->pv);                                    \
     memcpy(&target[i * 16], ctx->pv, 16);                                 \
 }
 
@@ -514,13 +514,13 @@ int twofish_encrypt_final(
 
 #define DECRYPT_ECB(ctx, nblock, crypted, plain) for (int i = 0; i < nblock; i++) { \
     memcpy(ctx->pv, &crypted[i * 16], 16);                                          \
-    decrypt(ctx->K, ctx->QF, ctx->pv);                                              \
+    twofish_internal_decrypt(ctx->K, ctx->QF, ctx->pv);                                              \
     memcpy(&plain[i * 16], ctx->pv, 16);                                            \
 }
 
 #define DECRYPT_CBC(ctx, nbloc, crypted, plain) for (int i = 0; i < nblock; i++) { \
     memcpy(&plain[i * 16], &crypted[i * 16], 16);                              \
-    decrypt(ctx->K, ctx->QF, &plain[i * 16]);                                  \
+    twofish_internal_decrypt(ctx->K, ctx->QF, &plain[i * 16]);                                  \
     fix_xor(&plain[i * 16], ctx->pv);                                          \
     memcpy(&ctx->pv, &crypted[i * 16], 16);                                    \
 }
