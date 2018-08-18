@@ -349,7 +349,7 @@ struct twofish {
     enum twofish_mode mode;
 };
 
-#define fix_xor(target, source) for (int i = 0; i < 16; i++) { (target)[i] = (target)[i] ^ (source)[i]; }
+#define fix_xor(target, source) for (int _i = 0; _i < 16; _i++) { (target)[_i] = (target)[_i] ^ (source)[_i]; }
 
 #define TWOFISH_INIT(key, len) {                      \
     int k;                                            \
@@ -529,7 +529,7 @@ int twofish_encrypt_final(
     memcpy(&plain[i * 16], &crypted[i * 16], 16);                               \
     twofish_internal_decrypt(ctx->K, ctx->QF, &plain[i * 16]);                  \
     fix_xor(&plain[i * 16], ctx->dpv);                                          \
-    memcpy(&ctx->dpv, &crypted[i * 16], 16);                                    \
+    memcpy(ctx->dpv, &crypted[i * 16], 16);                                     \
 }
 
 #define DECRYPT_WITH(ctx, nbloc, crypted, plain) switch (ctx->mode) { \

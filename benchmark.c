@@ -56,8 +56,12 @@ void bench()
     double diff;
     BYTE text[16];
     BYTE key[32];
+    struct twofish *twofish_ctx;
 
-    struct twofish *twofish_ctx = twofish_256_ecb_init(key, (void *) 0);
+    memset(text, 0, 16);
+    memset(key, 0, 32);
+    twofish_ctx = twofish_256_ecb_init(key, (void *) 0);
+
     gettimeofday(&tv_start, NULL);
     for (i=0; i < NUMTIMES; i++)
 	    twofish_encrypt_final(twofish_ctx, text, 16, text, 16);
@@ -85,6 +89,8 @@ int main()
        break anything
     */
     memset(key, 0, 32);
+    memset(crypt, 0, 16);
+
     memcpy(key,  "\x9F\x58\x9F\x5C\xF6\x12\x2C\x32"
 	         "\xB6\xBF\xEC\x2F\x2A\xE8\xC3\x5A", 16);
     memcpy(text, "\xD4\x91\xDB\x16\xE7\xB1\xC3\x9E"
