@@ -13,6 +13,13 @@ struct twofish;
 
 struct twofish *twofish_256_ecb_init(BYTE key[], BYTE iv[16]);
 struct twofish *twofish_256_cbc_init(BYTE key[], BYTE iv[16]);
+
+struct twofish *twofish_192_ecb_init(BYTE key[], BYTE iv[16]);
+struct twofish *twofish_192_cbc_init(BYTE key[], BYTE iv[16]);
+
+struct twofish *twofish_128_ecb_init(BYTE key[], BYTE iv[16]);
+struct twofish *twofish_128_cbc_init(BYTE key[], BYTE iv[16]);
+
 void twofish_free(struct twofish **pctx);
 
 int twofish_encrypt_update(struct twofish *ctx, BYTE plain_text[], u32 text_len, BYTE crypted_text[], u32 crypt_len);

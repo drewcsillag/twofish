@@ -88,16 +88,13 @@ int main()
        I=3 encryption from ECB test, again to make sure we didn't
        break anything
     */
-    memset(key, 0, 32);
-    memset(crypt, 0, 16);
-
     memcpy(key,  "\x9F\x58\x9F\x5C\xF6\x12\x2C\x32"
 	         "\xB6\xBF\xEC\x2F\x2A\xE8\xC3\x5A", 16);
     memcpy(text, "\xD4\x91\xDB\x16\xE7\xB1\xC3\x9E"
 	         "\x86\xCB\x08\x6B\x78\x9F\x54\x19", 16);
 
-    struct twofish *twofish_ecb_ctx = twofish_256_ecb_init(key, (void *) 0);
-    struct twofish *twofish_cbc_ctx = twofish_256_cbc_init(key, iv);
+    struct twofish *twofish_ecb_ctx = twofish_128_ecb_init(key, (void *) 0);
+    struct twofish *twofish_cbc_ctx = twofish_128_cbc_init(key, iv);
 
     printf("before-->     "); printHex(text, 16); printf("\n");
     twofish_encrypt_final(twofish_ecb_ctx, text, 16, crypt, 16);
