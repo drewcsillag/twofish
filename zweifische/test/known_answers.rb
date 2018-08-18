@@ -1,3 +1,5 @@
+# source: https://www.schneier.com/code/ecb_ival.txt
+
 ENC_TABLE_256 = [
 	{
 		KEY: "0000000000000000000000000000000000000000000000000000000000000000",

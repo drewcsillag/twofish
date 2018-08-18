@@ -34,7 +34,7 @@ tf = Zweifische::Cipher256ecb(key)
 crypted_text = tf.encrypt_final("more text here")
 ```
 
-to encrypt stream use `encrypt_update` for each chunks, then `encrypt_final` at the end of the strem.
+to encrypt stream use `encrypt_update` for each chunks, then `encrypt_final` at the end of the stream.
 
 ## Contributing
 
