@@ -23,43 +23,51 @@ void assert_string_type(VALUE key)
     }
 }
 
-static VALUE cipher_256_ecb_init(VALUE self, VALUE key)
-{
-    unsigned char *sKey;
-    struct twofish *ctx;
-    VALUE twofish_ctx;
-
-    assert_string_type(key);
-    sKey = (unsigned char *)StringValuePtr(key);
-
-    ctx = twofish_256_ecb_init(sKey, (void *)0);
-
-    twofish_ctx = TypedData_Wrap_Struct(rb_cData, &twofish_ctx_type, ctx);
-    rb_ivar_set(self, rb_intern("twofish_ctx"), twofish_ctx);
-
-    return Qnil;
+#define CIPHER_ECB_INIT(self, key, len) {                                    \
+    unsigned char *sKey;                                                     \
+    struct twofish *ctx;                                                     \
+    VALUE twofish_ctx;                                                       \
+                                                                             \
+    assert_string_type(key);                                                 \
+    sKey = (unsigned char *)StringValuePtr(key);                             \
+                                                                             \
+    ctx = twofish_##len##_ecb_init(sKey, (void *)0);                         \
+                                                                             \
+    twofish_ctx = TypedData_Wrap_Struct(rb_cData, &twofish_ctx_type, ctx);   \
+    rb_ivar_set(self, rb_intern("twofish_ctx"), twofish_ctx);                \
+                                                                             \
+    return Qnil;                                                             \
 }
 
-static VALUE cipher_256_cbc_init(VALUE self, VALUE key, VALUE iv)
-{
-    unsigned char *sKey;
-    unsigned char *sIV;
-    struct twofish *ctx;
-    VALUE twofish_ctx;
 
-    assert_string_type(key);
-    sKey = (unsigned char *)StringValuePtr(key);
+static VALUE cipher_256_ecb_init(VALUE self, VALUE key) CIPHER_ECB_INIT(self, key, 256);
+static VALUE cipher_192_ecb_init(VALUE self, VALUE key) CIPHER_ECB_INIT(self, key, 192);
+static VALUE cipher_128_ecb_init(VALUE self, VALUE key) CIPHER_ECB_INIT(self, key, 128);
 
-    assert_string_type(iv);
-    sIV = (unsigned char *)StringValuePtr(iv);
-
-    ctx = twofish_256_cbc_init(sKey, sIV);
-
-    twofish_ctx = TypedData_Wrap_Struct(rb_cData, &twofish_ctx_type, ctx);
-    rb_ivar_set(self, rb_intern("twofish_ctx"), twofish_ctx);
-
-    return Qnil;
+#define CIPHER_CBC_INIT(self, key, iv, len) {                               \
+    unsigned char *sKey;                                                    \
+    unsigned char *sIV;                                                     \
+    struct twofish *ctx;                                                    \
+    VALUE twofish_ctx;                                                      \
+                                                                            \
+    assert_string_type(key);                                                \
+    sKey = (unsigned char *)StringValuePtr(key);                            \
+                                                                            \
+    assert_string_type(iv);                                                 \
+    sIV = (unsigned char *)StringValuePtr(iv);                              \
+                                                                            \
+    ctx = twofish_##len##_cbc_init(sKey, sIV);                              \
+                                                                            \
+    twofish_ctx = TypedData_Wrap_Struct(rb_cData, &twofish_ctx_type, ctx);  \
+    rb_ivar_set(self, rb_intern("twofish_ctx"), twofish_ctx);               \
+                                                                            \
+    return Qnil;                                                            \
 }
+
+
+static VALUE cipher_256_cbc_init(VALUE self, VALUE key, VALUE iv) CIPHER_CBC_INIT(self, key, iv, 256);
+static VALUE cipher_192_cbc_init(VALUE self, VALUE key, VALUE iv) CIPHER_CBC_INIT(self, key, iv, 192);
+static VALUE cipher_128_cbc_init(VALUE self, VALUE key, VALUE iv) CIPHER_CBC_INIT(self, key, iv, 128);
 
 static VALUE cipher_encrypt_update(VALUE self, VALUE data)
 {
@@ -164,8 +172,8 @@ void Init_zweifische()
     rb_define_method(cCipher256ecb, "decrypt_update", cipher_decrypt_update, 1);
     rb_define_method(cCipher256ecb, "decrypt_final", cipher_decrypt_final, 1);
 
-    rb_define_method(cCipher256cbc, "update", cipher_encrypt_update, 1);
-    rb_define_method(cCipher256cbc, "final", cipher_encrypt_final, 1);
+    rb_define_method(cCipher256cbc, "encrypt_update", cipher_encrypt_update, 1);
+    rb_define_method(cCipher256cbc, "encrypt_final", cipher_encrypt_final, 1);
 
     rb_define_method(cCipher256cbc, "decrypt_update", cipher_decrypt_update, 1);
     rb_define_method(cCipher256cbc, "decrypt_final", cipher_decrypt_final, 1);

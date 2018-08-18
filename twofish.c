@@ -356,6 +356,40 @@ void fix_xor(BYTE target[16], BYTE source[16])
     }
 }
 
+#define TWOFISH_INIT(key, len) {                      \
+    int k;                                            \
+    u32 *S;                                           \
+    struct twofish *twofish_ctx;                      \
+                                                      \
+    twofish_ctx = calloc(1, sizeof(struct twofish));  \
+    assert(twofish_ctx);                              \
+                                                      \
+    twofish_ctx->N = len;                             \
+    keySched(key, len, &S, twofish_ctx->K, &k);       \
+    fullKey(S, k, twofish_ctx->QF);                   \
+    free(S);                                          \
+                                                      \
+    return twofish_ctx;                               \
+}
+
+#define TWOFISH_ECB_INIT(key, len) {          \
+    struct twofish *twofish_ctx;              \
+                                              \
+    twofish_ctx = twofish_##len##_init(key);  \
+    twofish_ctx->mode = twofish_mode_ecb;     \
+    return twofish_ctx;                       \
+}
+
+
+#define TWOFISH_CBC_INIT(key, iv, len) {      \
+    struct twofish *twofish_ctx;              \
+                                              \
+    twofish_ctx = twofish_##len##_init(key);  \
+    twofish_ctx->mode = twofish_mode_cbc;     \
+    memcpy(twofish_ctx->iv, iv, 16);          \
+    return twofish_ctx;                       \
+}
+
 /**
  * public API
  **/
@@ -365,41 +399,17 @@ void fix_xor(BYTE target[16], BYTE source[16])
  * we wont do any checking here and will assume user already
  * know about it. Twofish is undefined for key larger than 256 bit
  */
-struct twofish *twofish_256_init(BYTE key[32])
-{
-    int k;
-    u32 *S;
-    struct twofish *twofish_ctx;
+struct twofish *twofish_256_init(BYTE key[32]) TWOFISH_INIT(key, 256);
+struct twofish *twofish_192_init(BYTE key[32]) TWOFISH_INIT(key, 192);
+struct twofish *twofish_128_init(BYTE key[32]) TWOFISH_INIT(key, 128);
 
-    twofish_ctx = calloc(1, sizeof(struct twofish));
-    assert(twofish_ctx);
+struct twofish *twofish_256_ecb_init(BYTE key[32], BYTE iv[16] /* unused */) TWOFISH_ECB_INIT(key, 256);
+struct twofish *twofish_192_ecb_init(BYTE key[32], BYTE iv[16] /* unused */) TWOFISH_ECB_INIT(key, 192);
+struct twofish *twofish_128_ecb_init(BYTE key[32], BYTE iv[16] /* unused */) TWOFISH_ECB_INIT(key, 128);
 
-    twofish_ctx->N = 256;
-    keySched(key, 256, &S, twofish_ctx->K, &k);
-    fullKey(S, k, twofish_ctx->QF);
-    free(S);
-
-    return twofish_ctx;
-}
-
-struct twofish *twofish_256_ecb_init(BYTE key[32], BYTE iv[16] /* unused */)
-{
-    struct twofish *twofish_ctx;
-
-    twofish_ctx = twofish_256_init(key);
-    twofish_ctx->mode = twofish_mode_ecb;
-    return twofish_ctx;
-}
-
-struct twofish *twofish_256_cbc_init(BYTE key[32], BYTE iv[16])
-{
-    struct twofish *twofish_ctx;
-
-    twofish_ctx = twofish_256_init(key);
-    twofish_ctx->mode = twofish_mode_cbc;
-    memcpy(twofish_ctx->iv, iv, 16);
-    return twofish_ctx;
-}
+struct twofish *twofish_256_cbc_init(BYTE key[32], BYTE iv[16]) TWOFISH_CBC_INIT(key, iv, 256);
+struct twofish *twofish_192_cbc_init(BYTE key[32], BYTE iv[16]) TWOFISH_CBC_INIT(key, iv, 192);
+struct twofish *twofish_128_cbc_init(BYTE key[32], BYTE iv[16]) TWOFISH_CBC_INIT(key, iv, 128);
 
 void twofish_free(struct twofish **pctx)
 {
@@ -425,13 +435,13 @@ else {                                                                       \
 
 #define ENCRYPT_ECB(ctx, nblock, text, target) for (int i = 0; i < nblock; i++) { \
     memcpy(ctx->pv, &text[i * 16], 16);                                   \
-    twofish_internal_encrypt(ctx->K, ctx->QF, ctx->pv);                                    \
+    twofish_internal_encrypt(ctx->K, ctx->QF, ctx->pv);                   \
     memcpy(&target[i * 16], ctx->pv, 16);                                 \
 }
 
 #define ENCRYPT_CBC(ctx, nblock, text, target) for (int i = 0; i < nblock; i++) { \
     fix_xor(ctx->pv, &text[i * 16]);                                      \
-    twofish_internal_encrypt(ctx->K, ctx->QF, ctx->pv);                                    \
+    twofish_internal_encrypt(ctx->K, ctx->QF, ctx->pv);                   \
     memcpy(&target[i * 16], ctx->pv, 16);                                 \
 }
 
@@ -514,13 +524,13 @@ int twofish_encrypt_final(
 
 #define DECRYPT_ECB(ctx, nblock, crypted, plain) for (int i = 0; i < nblock; i++) { \
     memcpy(ctx->pv, &crypted[i * 16], 16);                                          \
-    twofish_internal_decrypt(ctx->K, ctx->QF, ctx->pv);                                              \
+    twofish_internal_decrypt(ctx->K, ctx->QF, ctx->pv);                             \
     memcpy(&plain[i * 16], ctx->pv, 16);                                            \
 }
 
 #define DECRYPT_CBC(ctx, nbloc, crypted, plain) for (int i = 0; i < nblock; i++) { \
     memcpy(&plain[i * 16], &crypted[i * 16], 16);                              \
-    twofish_internal_decrypt(ctx->K, ctx->QF, &plain[i * 16]);                                  \
+    twofish_internal_decrypt(ctx->K, ctx->QF, &plain[i * 16]);                 \
     fix_xor(&plain[i * 16], ctx->pv);                                          \
     memcpy(&ctx->pv, &crypted[i * 16], 16);                                    \
 }
