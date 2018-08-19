@@ -20,7 +20,7 @@ Or install it yourself as:
 
 ## Usage
 
-Currently the only supported key length is 256bit.
+All key length (256, 192, and 128 bit) is supported. Each respective class can be used directly.
 
 to use:
 ```ruby
@@ -28,10 +28,10 @@ require "zweifische"
 
 # ecb mode
 
-# key should be 16, 24, or 32 bytes length (will be padded with zero bytes if less than 32 bytes)
+# for 128 bit key (16 bytes)
 key="0123456789123456"
-tf = Zweifische::Cipher256ecb.new(key)
-crypted_text = tf.encrypt_final("more text here")
+tf = Zweifische::Cipher128ecb.new(key)
+crypted_text = tf.encrypt("plain text to encrypt here")
 ```
 
 to encrypt stream use `encrypt_update` for each chunks, then `encrypt_final` at the end of the stream.
