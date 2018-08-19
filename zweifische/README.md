@@ -30,7 +30,7 @@ require "zweifische"
 
 # key should be 16, 24, or 32 bytes length (will be padded with zero bytes if less than 32 bytes)
 key="0123456789123456"
-tf = Zweifische::Cipher256ecb(key)
+tf = Zweifische::Cipher256ecb.new(key)
 crypted_text = tf.encrypt_final("more text here")
 ```
 
