@@ -3,8 +3,12 @@ Optimized implementation of twofish block cipher algorithm in C written by @drew
 with stream encryption / decryption API similar to OpenSSL EVP.
 
 Encryption supported:
-- [x] twofish-256-ecb
-- [x] twofish-256-cbc
+- [x] twofish-256-ecb `twofish_256_ecb_init`
+- [x] twofish-256-cbc `twofish_256_cbc_init`
+- [x] twofish-192-ecb `twofish_192_ecb_init`
+- [x] twofish-192-cbc `twofish_192_cbc_init`
+- [x] twofish-128-ecb `twofish_128_ecb_init`
+- [x] twofish-128-cbc `twofish_128_cbc_init`
 
 bindings:
 - [x] ruby
