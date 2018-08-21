@@ -92,6 +92,32 @@ static VALUE cipher_128_cbc_init(VALUE self, VALUE key, VALUE iv) CIPHER_CBC_INI
 static VALUE cipher_encrypt_update(VALUE self, VALUE data) CIPHER_OP(self, data, twofish_encrypt_update);
 static VALUE cipher_encrypt_final(VALUE self, VALUE data) CIPHER_OP(self, data, twofish_encrypt_final);
 
+static VALUE cipher_encrypt_final_with_pad(VALUE self, VALUE data, VALUE pad)
+{
+    unsigned char *sData, *targetData;
+    unsigned int lData, lTargetData;
+    int result;
+    struct twofish *ctx;
+    VALUE twofish_ctx;
+
+    assert_string_type(data);
+    sData = (unsigned char *)StringValuePtr(data);
+    lData = RSTRING_LEN(data);
+
+    twofish_ctx = rb_ivar_get(self, rb_intern("twofish_ctx"));
+    TypedData_Get_Struct(twofish_ctx, struct twofish, &twofish_ctx_type, ctx);
+
+    lTargetData = ((lData / 16) + 1) * 16;
+    targetData = ALLOC_N(unsigned char, lTargetData);
+    result = twofish_encrypt_final(ctx, sData, lData, targetData, lTargetData);
+
+    if (result < 0) {
+        rb_raise(rb_eRuntimeError, "provided length must be at least 16 bytes");
+    }
+
+    return rb_str_new(targetData, result);
+}
+
 static VALUE cipher_decrypt_update(VALUE self, VALUE crypted) CIPHER_OP(self, crypted, twofish_decrypt_update);
 static VALUE cipher_decrypt_final(VALUE self, VALUE crypted) CIPHER_OP(self, crypted, twofish_decrypt_final);
 
@@ -111,12 +137,9 @@ void Init_zweifische()
     rb_define_method(cCipher256ecb, "initialize", cipher_256_ecb_init, 1);
 
     rb_define_method(cCipher256ecb, "encrypt_update", cipher_encrypt_update, 1);
-    rb_define_method(cCipher256ecb, "encrypt_final", cipher_encrypt_final, 1);
+    rb_define_method(cCipher256ecb, "c_encrypt_final", cipher_encrypt_final, 1);
     rb_define_method(cCipher256ecb, "decrypt_update", cipher_decrypt_update, 1);
-    rb_define_method(cCipher256ecb, "decrypt_final", cipher_decrypt_final, 1);
-
-    rb_define_alias(cCipher256ecb, "encrypt", "encrypt_final");
-    rb_define_alias(cCipher256ecb, "decrypt", "decrypt_final");
+    rb_define_method(cCipher256ecb, "c_decrypt_final", cipher_decrypt_final, 1);
 
     cCipher256cbc = rb_define_class_under(mZweifische, "Cipher256cbc", cCipher256ecb);
     rb_define_method(cCipher256cbc, "initialize", cipher_256_cbc_init, 2);

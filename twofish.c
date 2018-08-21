@@ -500,14 +500,11 @@ int twofish_encrypt_final(
     nblock = text_len / 16;
     lrest = text_len % 16;
 
-    ctx->nrest = 0;
-    memset(ctx->rest, 0, 16);
-
     if (lrest) {
         if (text && text != plain_text) {
             free(text);
         }
-        return -3;
+        return -1 * lrest;
     }
 
     ENCRYPT_WITH(ctx, nblock, text, crypted_text);
@@ -592,7 +589,7 @@ int twofish_decrypt_final(
         if (text && text != crypted_text) {
             free(text);
         }
-        return -3;
+        return -1 * lrest;
     }
 
     DECRYPT_WITH(ctx, nblock, text, plain_text);
