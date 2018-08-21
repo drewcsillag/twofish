@@ -1,0 +1,5 @@
+twofish-benchmark
+*.pyc
+*.so
+*.log
+Gemfile.lock
