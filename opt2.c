@@ -25,8 +25,8 @@
 
 */
 
-#include <stdio.h>
 #include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include "tables.h"
 #define u32 unsigned int
@@ -237,7 +237,7 @@ void printRound(int round, u32 R0, u32 R1, u32 R2, u32 R3, u32 K1, u32 K2)
     R2 = ROR(R2 ^ (T1 + T0 + K[2*round+8]), 1); \
     R3 = ROL(R3, 1) ^ (2*T1 + T0 + K[2*round+9]); 
 
-inline void encrypt(u32 K[40], u32 S[4][256], BYTE PT[16])
+inline void tfencrypt(u32 K[40], u32 S[4][256], BYTE PT[16])
 {
     u32 R0, R1, R2, R3;
     u32 T0, T1;
@@ -384,7 +384,7 @@ void Itest(int n)
 	free(KS);
 	/*printSubkeys(K);*/
 	memcpy(nct, ct, 16);
-        encrypt(K, QF, nct);
+        tfencrypt(K, QF, nct);
 	printf("\nI=%d\n", i+1);
 	printf("KEY="); 
 	printHex(k, n/8);
@@ -437,7 +437,7 @@ void bench()
 
     gettimeofday(&tv_start, NULL);
     for (i=0; i < NUMTIMES; i++)
-	encrypt(K, QF, text);
+	tfencrypt(K, QF, text);
     gettimeofday(&tv_end, NULL);
 
     diff = getTimeDiff(tv_start, tv_end);
@@ -445,6 +445,7 @@ void bench()
     printf("bytes/sec = %f\n", (NUMTIMES*16)/diff);
     printf("KB/sec = %f\n", NUMTIMES/(diff*64));
     printf("MB/sec = %f\n", NUMTIMES/(diff*65536));
+    printf("approx clocks/enc (for 233Mhz) = %f\n", 233333333/(NUMTIMES/diff));
 }
 
 
@@ -466,7 +467,7 @@ int main()
     fullKey(S, k, QF);
     free(S);
     puts("before"); printHex(text, 16); printf("\n");
-    encrypt(K, QF, text);
+    tfencrypt(K, QF, text);
     puts("after"); printHex(text, 16); printf("\n");
 
     /* 
@@ -481,7 +482,7 @@ int main()
     fullKey(S, k, QF);
     free(S);
     printf("before-->"); printHex(text, 16); printf("\n");
-    encrypt(K, QF, text);
+    tfencrypt(K, QF, text);
     printf("after--->"); printHex(text, 16); printf("\n");
     decrypt(K, QF, text);
     printf("after--->"); printHex(text, 16); printf("\n");

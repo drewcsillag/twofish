@@ -13,7 +13,7 @@ def to32Char(X):
     return list(struct.unpack('>BBBB', struct.pack('>I', X)))
 
 def bytesTo32Bits(l):
-    t = 0L
+    t = 0
     for i in l:
         t = t << 8
         t = t + i
@@ -22,7 +22,7 @@ def bytesTo32Bits(l):
 def ROR(x, n):
     #assumes 32 bit words
     #print 'n', n
-    mask = (2L**n) - 1
+    mask = (2**n) - 1
     mask_bits = x & mask
     return (x >> n) | (mask_bits << (32 - n))
 
@@ -62,7 +62,7 @@ def matrixMultiply(md, sd, modulus):
     r = []
     i = 0
     for j in range(len(md)):
-        t = 0L
+        t = 0
         for k in range(len(sd)):
             #print "t=%X" % t
             t = t ^ gfMult(md[j][k], sd[k], modulus)
@@ -99,13 +99,13 @@ Q1 = [
 
 def printRoundKeys(K):
     for i in range(0, len(K), 2):
-        print '%8s %8s' % (hex(K[i])[2:-1], hex(K[i+1])[2:-1])
+        print('%8s %8s' % (hex(K[i])[2:-1], hex(K[i+1])[2:-1]))
         
 def keySched(M, N): #M is key text in 32 bit words, N is bit width of M
-    k = (N+63)/64
+    k = int((N+63)/64)
 
-    Me = map(lambda x, M=M: M[x], range(0, (2*k-1), 2))
-    Mo = map(lambda x, M=M: M[x], range(1, (2*k), 2))
+    Me = list(map(lambda x, M=M: M[x], range(0, (2*k-1), 2)))
+    Mo = list(map(lambda x, M=M: M[x], range(1, (2*k), 2)))
     #print 'me=', map(hex, Me)
     #print 'mo=', map(hex, Mo)
     #print 'k=', k, len(M)
@@ -135,7 +135,7 @@ def keySched(M, N): #M is key text in 32 bit words, N is bit width of M
 
 def makeKey(Me, Mo, k):
     K = []
-    rho = 0x01010101L
+    rho = 0x01010101
     #print "LOOP is:", ROUNDS+4
     for i in range(ROUNDS + 4):
         A = h(2*i*rho, Me, k)
@@ -145,13 +145,13 @@ def makeKey(Me, Mo, k):
         #print
 
         B = ROL(B, 8)
-        K.append( (A+B) & 0xFFFFFFFFL )
-        K.append(ROL((A + 2*B) & 0xFFFFFFFFL, 9))
+        K.append( (A+B) & 0xFFFFFFFF )
+        K.append(ROL((A + 2*B) & 0xFFFFFFFF, 9))
     return K
 
 def Qpermute(x, Q):
     x=int(x)
-    a0, b0 = x/16, x % 16
+    a0, b0 = int(x/16), x % 16
     a1 = a0 ^ b0
     b1 = (   a0 ^ ROR4(b0, 1) ^ (8*a0)  ) % 16
     a2, b2 = Q[0][a1], Q[1][b1]
@@ -170,7 +170,7 @@ def h(X, L, k):
 
     x = to32Char(X)
     x.reverse()
-    l = map(to32Char, L)
+    l = list(map(to32Char, L))
     y = x[:]
 
     Qdones = [
@@ -200,8 +200,8 @@ def g(X, S, k):
 def F(R0, R1, r, K, k, S):
     T0 = g(R0, S, k)
     T1 = g(ROL(R1, 8), S, k)
-    F0 = (T0 + T1 + K[2*r+8]) & 0xFFFFFFFFL
-    F1 = (T0 + 2*T1 + K[2*r+9]) & 0xFFFFFFFFL
+    F0 = (T0 + T1 + K[2*r+8]) & 0xFFFFFFFF
+    F1 = (T0 + 2*T1 + K[2*r+9]) & 0xFFFFFFFF
     #print 'T0=', hex(T0)
     #print 'T1=', hex(T1)
     #print 'F0=', hex(F0)
@@ -210,10 +210,10 @@ def F(R0, R1, r, K, k, S):
 
 def encrypt(K, k, S, PT): #pt is array of 4 32bit L's
     #BSWAP PT
-    PT = map(lambda x:struct.unpack('>I', struct.pack('<I', x))[0], PT)
+    PT = list(map(lambda x:struct.unpack('>I', struct.pack('<I', x))[0], PT))
     #print 'round[-1]', map(hex, PT)
     #input whiten
-    R = map(lambda i, PT=PT, K=K: PT[i] ^ K[i], range(4))
+    R = list(map(lambda i, PT=PT, K=K: PT[i] ^ K[i], range(4)))
 
     #print 'round[0]', map(hex, R)
     for r in range(ROUNDS):
@@ -232,19 +232,19 @@ def encrypt(K, k, S, PT): #pt is array of 4 32bit L's
 
     R = [R[2], R[3], R[0], R[1]]
     #print map(hex, K[4:9])
-    R = map(lambda i, R=R, K=K: R[(i+2) % 4] ^ K[i+4], range(4))
+    R = list(map(lambda i, R=R, K=K: R[(i+2) % 4] ^ K[i+4], range(4)))
     #BSWAP R
-    R = map(lambda x:struct.unpack('>I', struct.pack('<I', x))[0], R)
+    R = list(map(lambda x:struct.unpack('>I', struct.pack('<I', x))[0], R))
     #print 'round[17]', map(hex, R)
     return R
 
 def decrypt(K, k, S, PT): #pt is array of 4 32bit L's
     #BSWAP PT
-    PT = map(lambda x:struct.unpack('>I', struct.pack('<I', x))[0], PT)
+    PT = list(map(lambda x:struct.unpack('>I', struct.pack('<I', x))[0], PT))
     #PT.reverse()
     #print 'round[-1]', map(hex, PT)
     #input whiten
-    R = map(lambda i, PT=PT, K=K: PT[i] ^ K[i+4], range(4))
+    R = list(map(lambda i, PT=PT, K=K: PT[i] ^ K[i+4], range(4)))
 
     #print 'round[17]', map(hex, R)
     for r in range(ROUNDS-1, -1, -1):
@@ -258,79 +258,79 @@ def decrypt(K, k, S, PT): #pt is array of 4 32bit L's
         if (r > 0): #/* swap for next round */
             R[0], R[2] = R[2], R[0]
             R[1], R[3] = R[3], R[1]
-        print 'round[%s]' % (r+1), map(hex, R)
+        print('round[%s]' % (r+1), map(hex, R))
 
     R = [R[2], R[3], R[0], R[1]]
-    R = map(lambda i, R=R, K=K: R[(i+2) % 4] ^ K[i], range(4))
+    R = list(map(lambda i, R=R, K=K: R[(i+2) % 4] ^ K[i], range(4)))
     #BSWAP R
-    R = map(lambda x:struct.unpack('>I', struct.pack('<I', x))[0], R)
+    R = list(map(lambda x:struct.unpack('>I', struct.pack('<I', x))[0], R))
     #print 'round[-1]', map(hex, R)
     return R
 
 
 def testKey(K, k, S):
-    print 'subkeys'
+    print( 'subkeys')
     printRoundKeys(K)
     #for i in range(0, len(k.subKeys), 2):
     #    print hex(k.subKeys[i]), hex(k.subKeys[i+1])
     
-    ct = encrypt(K, k, S, [0L, 0L, 0L, 0L])
-    print 'CT=', map(hex, ct)
+    ct = encrypt(K, k, S, [0, 0, 0, 0])
+    print('CT=', map(hex, ct))
     pt = decrypt(K, k, S, ct)
     
-    print 'PT=', map(hex, pt)
-    print ; print ; print
+    print('PT=', map(hex, pt))
+    print() ; print() ; print()
 
 def dispLongList(v):
-    return string.join(map(lambda x:string.zfill(hex(x)[2:-1], 8), v), '')
+    return ''.join(map(lambda x: hex(x)[2:].zfill(8), v)).upper()
 
 def Itest128():
-    ct = [0L, 0L, 0L, 0L]
-    k = [0L, 0L, 0L, 0L]
+    ct = [0, 0, 0, 0]
+    k = [0, 0, 0, 0]
 
     for i in range(49):
         K, Kk, KS = keySched(k, 128)
         #printRoundKeys(K)
         nct = encrypt(K, Kk, KS, ct)
-        print
-        print 'I=%d' % (i+1)
-        print 'KEY=%s' % dispLongList(k)
-        print 'PT=%s' % dispLongList(ct)
-        print 'CT=%s' % dispLongList(nct)
+        print()
+        print('I=%d' % (i+1))
+        print('KEY=%s' % dispLongList(k))
+        print('PT=%s' % dispLongList(ct))
+        print('CT=%s' % dispLongList(nct))
         k = ct
         ct = nct
         
 def Itest256():
-    ct = [0L, 0L, 0L, 0L]
-    k1 = [0L, 0L, 0L, 0L]
-    k2 = [0L, 0L, 0L, 0L]
+    ct = [0, 0, 0, 0]
+    k1 = [0, 0, 0, 0]
+    k2 = [0, 0, 0, 0]
     
     for i in range(49):
         K, Kk, KS = keySched(k1 + k2, 256)
         nct = encrypt(K, Kk, KS, ct)
-        print
-        print 'I=%d' % (i+1)
-        print 'KEY=%s' % (dispLongList(k1)+dispLongList(k2))
-        print 'PT=%s' % dispLongList(ct)
-        print 'CT=%s' % dispLongList(nct)
+        print()
+        print('I=%d' % (i+1))
+        print('KEY=%s' % (dispLongList(k1)+dispLongList(k2)))
+        print('PT=%s' % dispLongList(ct))
+        print('CT=%s' % dispLongList(nct))
 
         k2 = k1
         k1 = ct
         ct = nct
 
 def Itest192():
-    ct = [0L, 0L, 0L, 0L]
-    k1 = [0L, 0L, 0L, 0L]
-    k2 = [0L, 0L, 0L, 0L]
+    ct = [0, 0, 0, 0]
+    k1 = [0, 0, 0, 0]
+    k2 = [0, 0, 0, 0]
     
     for i in range(49):
         K, Kk, KS = keySched(k1 + k2, 192)
         nct = encrypt(K, Kk, KS, ct)
-        print
-        print 'I=%d' % (i+1)
-        print 'KEY=%s' % (dispLongList(k1)+dispLongList(k2[:2]))
-        print 'PT=%s' % dispLongList(ct)
-        print 'CT=%s' % dispLongList(nct)
+        print()
+        print('I=%d' % (i+1))
+        print('KEY=%s' % (dispLongList(k1)+dispLongList(k2[:2])))
+        print('PT=%s' % dispLongList(ct))
+        print('CT=%s' % dispLongList(nct))
 
         k2 = k1
         k1 = ct
@@ -339,27 +339,28 @@ def Itest192():
 def bench():
     import time
     ENCS = 50
-    k = [0L, 0L, 0L, 0L]
-    pt = [0L, 0L, 0L, 0L]
+    k = [0, 0, 0, 0]
+    pt = [0, 0, 0, 0]
     K, Kk, KS = keySched(k, 128)
     a = range(ENCS)
     b = time.time()
     for i in a:
         encrypt(K, Kk, KS, pt)
     e = time.time()
-    print 'time for %d encryptions: %f' % (ENCS, e-b)
-    print 'e/s:', (ENCS / (e-b))
-    print 'b/s:', (16 * (ENCS / (e-b)))
+    print('time for %d encryptions: %f' % (ENCS, e-b))
+    print('e/s:', (ENCS / (e-b)))
+    print('b/s:', (16 * (ENCS / (e-b))))
 
     b = time.time()
     for i in a:
         keySched(k, 128)
     e = time.time()
-    print 'time for %d key setups: %f' % (ENCS, e-b)
-    print 'ks/s:', (ENCS / (e-b))
+    print('time for %d key setups: %f' % (ENCS, e-b))
+    print('ks/s:', (ENCS / (e-b)))
 
 if __name__ == '__main__':
-    Itest256()
+    #Itest256()
+    Itest128()
     #print hex(polyMult(0x5b, 3))
     #Itest192()
     #Itest256()
@@ -386,7 +387,7 @@ if __name__ == '__main__':
     #bench()
     K,k,S = keySched([0x9F589F5C, 0xF6122C32, 0xB6BFEC2F, 0x2AE8C35A], 128)
     CT = encrypt(K, k, S,
-                 [ 0xD491DB16L, 0xE7B1C39EL, 0x86CB086BL, 0x789F5419L ])
-    print dispLongList(CT)
+                 [ 0xD491DB16, 0xE7B1C39E, 0x86CB086B, 0x789F5419 ])
+    print(dispLongList(CT))
 
 
