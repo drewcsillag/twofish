@@ -439,6 +439,7 @@ void bench()
     for (i=0; i < NUMTIMES; i++)
 	tfencrypt(K, QF, text);
     gettimeofday(&tv_end, NULL);
+    // print so -O3 doesn't optimize away the whole benchmark
     printf("after--->"); printHex(text, 16); printf("\n");
 
     diff = getTimeDiff(tv_start, tv_end);
