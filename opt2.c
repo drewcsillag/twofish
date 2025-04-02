@@ -439,6 +439,7 @@ void bench()
     for (i=0; i < NUMTIMES; i++)
 	tfencrypt(K, QF, text);
     gettimeofday(&tv_end, NULL);
+    printf("after--->"); printHex(text, 16); printf("\n");
 
     diff = getTimeDiff(tv_start, tv_end);
     printf("encs/sec = %f\n", NUMTIMES/diff);
